@@ -22,44 +22,18 @@ References:
 
 import argparse
 import logging
+import os
+from pathlib import Path
 import sys
 
 from mp3toolbox import __version__
+from mp3toolbox.modes import groom_genres, remove_double_albumartist, title_to_album
 
 __author__ = "verybadsoldier"
 __copyright__ = "verybadsoldier"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
-
-
-# ---- Python API ----
-# The functions defined in this section can be imported by users in their
-# Python scripts/interactive interpreter, e.g. via
-# `from mp3toolbox.skeleton import fib`,
-# when using this Python module as a library.
-
-
-def fib(n):
-    """Fibonacci example function
-
-    Args:
-      n (int): integer
-
-    Returns:
-      int: n-th Fibonacci number
-    """
-    assert n > 0
-    a, b = 1, 1
-    for _i in range(n - 1):
-        a, b = b, a + b
-    return a
-
-
-# ---- CLI ----
-# The functions defined in this section are wrappers around the main Python
-# API allowing them to be called directly from the terminal as a CLI
-# executable/script.
 
 
 def parse_args(args):
@@ -78,7 +52,6 @@ def parse_args(args):
         action="version",
         version=f"mp3toolbox {__version__}",
     )
-    parser.add_argument(dest="n", help="n-th Fibonacci number", type=int, metavar="INT")
     parser.add_argument(
         "-v",
         "--verbose",
@@ -95,6 +68,25 @@ def parse_args(args):
         action="store_const",
         const=logging.DEBUG,
     )
+
+    parser.add_argument(
+        "input_folder",
+        help="root directoy with media files",
+        type=str,
+    )
+
+    subparsers = parser.add_subparsers()
+
+    for mode in (groom_genres, remove_double_albumartist, title_to_album):
+        name = mode.__name__.split(".")[-1]
+        mode_parser = subparsers.add_parser(name)
+        mode_parser.set_defaults(func=mode.process)
+    # groom_albumartist = subparsers.add_parser("groom_albumartist")
+    # groom_albumartist.set_defaults(sdf="grrom_albumartist")
+    #
+    # genre_sanitize = subparsers.add_parser("genre_sanitize")
+    # genre_sanitize.set_defaults(sdf="genre_sanitize")
+
     return parser.parse_args(args)
 
 
@@ -123,8 +115,18 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     _logger.debug("Starting crazy calculations...")
-    print(f"The {args.n}-th Fibonacci number is {fib(args.n)}")
-    _logger.info("Script ends here")
+
+    for subdir, dirs, files in os.walk(args.input_folder):
+        for file in files:
+            fullpath = Path(subdir + "/" + file)
+            if fullpath.suffix not in [".mp3", ".m4a"]:
+                continue
+
+            try:
+                _logger.info(f"Processing file: {fullpath}")
+                args.func(subdir, file, fullpath)
+            except Exception as e:
+                _logger.error(f"Error processing file: {fullpath}. Error: {str(e)}")
 
 
 def run():
@@ -132,18 +134,9 @@ def run():
 
     This function can be used as entry point to create console scripts with setuptools.
     """
+    logging.basicConfig(level=logging.INFO)
     main(sys.argv[1:])
 
 
 if __name__ == "__main__":
-    # ^  This is a guard statement that will prevent the following code from
-    #    being executed in the case someone imports this file instead of
-    #    executing it as a script.
-    #    https://docs.python.org/3/library/__main__.html
-
-    # After installing your project with pip, users can also run your Python
-    # modules as scripts via the ``-m`` flag, as defined in PEP 338::
-    #
-    #     python -m mp3toolbox.skeleton 42
-    #
     run()
