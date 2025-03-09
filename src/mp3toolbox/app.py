@@ -96,6 +96,8 @@ def setup_logging(loglevel):
     Args:
       loglevel (int): minimum loglevel for emitting messages
     """
+    if loglevel is None:
+        loglevel = logging.INFO
     logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
     logging.basicConfig(
         level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
@@ -116,17 +118,20 @@ def main(args):
     setup_logging(args.loglevel)
     _logger.debug("Starting crazy calculations...")
 
-    for subdir, dirs, files in os.walk(args.input_folder):
-        for file in files:
-            fullpath = Path(subdir + "/" + file)
-            if fullpath.suffix not in [".mp3", ".m4a"]:
-                continue
+    folders = args.input_folder.split(",")
+    for folder in folders:
+        _logger.info("Processing folder: %s", folder)
+        for subdir, dirs, files in os.walk(folder):
+            for file in files:
+                fullpath = Path(subdir + "/" + file)
+                if fullpath.suffix not in [".mp3", ".m4a"]:
+                    continue
 
-            try:
-                _logger.info(f"Processing file: {fullpath}")
-                args.func(subdir, file, fullpath)
-            except Exception as e:
-                _logger.error(f"Error processing file: {fullpath}. Error: {str(e)}")
+                try:
+                    _logger.debug(f"Processing file: {fullpath}")
+                    args.func(subdir, file, fullpath)
+                except Exception as e:
+                    _logger.error(f"Error processing file: {fullpath}. Error: {str(e)}")
 
 
 def run():

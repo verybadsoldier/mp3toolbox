@@ -15,6 +15,11 @@ _GENRES_TO_GROOM: dict[str, tuple[str]] = {
     "Trip Hop": ("Trip-Hop",),
     "Jazz-Funk": ("Jazz+Funk",),
     "Melodic House;Techno": ("Melodic House & Techno",),
+    "Alternative Rock": ("AlternRock",),
+    "Dancehall": ("Dance Hall",),
+    "Bossa Nova": ("Bossanova",),
+    "Bass Music": ("Bass",),
+    # "Club-House": ("Club House",),
 }
 
 _logger = logging.getLogger(__name__)
@@ -22,8 +27,6 @@ _logger = logging.getLogger(__name__)
 
 def process(_subdir: str, _filename: str, fullpath: Path):
     """Remove tags TXXX ALBUM_ARTSIST which can even be existing multiple times"""
-    print(fullpath)
-
     audio = mutagen.File(fullpath, easy=True)
 
     if "genre" not in audio:
@@ -38,6 +41,7 @@ def process(_subdir: str, _filename: str, fullpath: Path):
         for real, aliases in _GENRES_TO_GROOM.items():
             for a in aliases:
                 if g.lower() == a.lower():
+                    _logger.info("Replacing genre '%s' by '%s'", a, real)
                     modified = True
                     new_genres.append(real)
                     break
